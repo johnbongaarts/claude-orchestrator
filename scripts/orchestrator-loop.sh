@@ -1,8 +1,27 @@
 #!/bin/bash
 set -e
 
-REPO_NAME="${REPO_NAME:-medicalbills}"
-REPO_FULL="Mudunuri-Ventures/$REPO_NAME"
+# Detect repository from git remote or environment
+# Returns org/repo format (e.g., "reshashi/claude-orchestrator")
+detect_repo() {
+    local remote_url
+    remote_url=$(git remote get-url origin 2>/dev/null || echo "")
+
+    if [ -n "$remote_url" ]; then
+        # Extract org/repo from various URL formats:
+        # - git@github.com:org/repo.git
+        # - https://github.com/org/repo.git
+        # - https://github.com/org/repo
+        echo "$remote_url" | sed -E 's|.*[:/]([^/]+/[^/]+?)(\.git)?$|\1|'
+    else
+        # Fallback: use directory name if not in a git repo with remote
+        basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+    fi
+}
+
+# Repository configuration - auto-detect if not set via environment
+REPO_FULL="${REPO_FULL:-$(detect_repo)}"
+REPO_NAME="${REPO_NAME:-$(basename "$REPO_FULL")}"
 POLL_INTERVAL="${POLL_INTERVAL:-5}"
 LOG_FILE="${LOG_FILE:-$HOME/.claude/orchestrator.log}"
 PID_FILE="$HOME/.claude/orchestrator.pid"
